@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { riskHex, riskLevelLabel, scoreToLevel } from '../utils/moderation';
 

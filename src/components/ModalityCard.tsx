@@ -1,4 +1,3 @@
-import React from 'react';
 import { AudioLinesIcon, EyeIcon, TypeIcon } from 'lucide-react';
 import type { ModalitySignal } from '../types/moderation';
 import { riskBadgeClass, riskBarClass, riskLevelLabel, riskTextClass } from '../utils/moderation';

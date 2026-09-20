@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronDownIcon, RadioIcon, ShieldCheckIcon, UploadCloudIcon, VideoIcon } from 'lucide-react';
 import type { StageMode } from '../types/moderation';
 import { moderator } from '../data/moderation';

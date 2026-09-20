@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckIcon, SparklesIcon } from 'lucide-react';
 import type { ActionKey, ChunkProfile } from '../types/moderation';
 import { moderationActions } from '../data/moderation';

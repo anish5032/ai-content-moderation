@@ -135,7 +135,7 @@ export function profileForChunk(chunk: Chunk): ChunkProfile {
   };
 }
 
-function recommendAction(level: RiskLevel, primary: Modality): ActionKey {
+export function recommendAction(level: RiskLevel, primary: Modality): ActionKey {
   if (level === 'critical') return 'block';
   if (level === 'high') return primary === 'visual' ? 'blur' : 'mute';
   if (level === 'moderate') return 'flag';

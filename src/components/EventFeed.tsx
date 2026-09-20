@@ -1,4 +1,3 @@
-import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AudioLinesIcon, EyeIcon, TypeIcon } from 'lucide-react';
 import type { ModerationEvent } from '../types/moderation';

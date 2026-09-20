@@ -1,4 +1,3 @@
-import React from 'react';
 import { LayersIcon } from 'lucide-react';
 import type { Chunk, ChunkProfile } from '../types/moderation';
 import { CompositeGauge } from './CompositeGauge';

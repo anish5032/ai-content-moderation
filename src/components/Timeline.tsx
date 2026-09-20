@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Chunk } from '../types/moderation';
 import { formatClock, riskBarClass, riskLevelLabel, riskTextClass } from '../utils/moderation';
 
