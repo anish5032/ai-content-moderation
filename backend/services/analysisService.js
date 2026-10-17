@@ -126,6 +126,13 @@ function severityForDetections(detectedEntries) {
   return highestSeverity;
 }
 
+export function peakVideoRiskScore(chunkScores) {
+  return chunkScores.reduce(
+    (highestScore, score) => Math.max(highestScore, score),
+    0,
+  );
+}
+
 export async function analyzeText(text) {
   const prediction = await predictText(text);
   const rawScores = prediction.scores;
@@ -278,7 +285,7 @@ export async function runAnalysis(videoId, resultId) {
     );
 
     const events = [];
-    let topScore = 0;
+    const chunkScores = [];
     let strongestSignal = null;
     let highestSeverity = 'safe';
 
@@ -357,9 +364,7 @@ export async function runAnalysis(videoId, resultId) {
         strongestSignal = signal;
       }
 
-      if (signal.score > topScore) {
-        topScore = signal.score;
-      }
+      chunkScores.push(signal.score);
 
       if (severityRank[signal.level] > severityRank[highestSeverity]) {
         highestSeverity = signal.level;
@@ -410,6 +415,7 @@ export async function runAnalysis(videoId, resultId) {
       event => event.review.status === 'pending',
     ).length;
 
+    const riskScore = peakVideoRiskScore(chunkScores);
     const completedAt = now();
 
     await database.collection('moderation_results').updateOne(
@@ -418,7 +424,7 @@ export async function runAnalysis(videoId, resultId) {
         $set: {
           status: 'completed',
           riskLevel: highestSeverity,
-          riskScore: topScore,
+          riskScore,
           topCategory: strongestSignal?.topCategory ?? null,
           topCategoryName: strongestSignal?.topCategoryName ?? null,
           categoryScores: strongestSignal?.categoryScores ?? {},
@@ -440,7 +446,7 @@ export async function runAnalysis(videoId, resultId) {
         $set: {
           status: pending ? 'needs_review' : 'ready',
           riskLevel: highestSeverity,
-          riskScore: topScore,
+          riskScore,
           error: null,
           updatedAt: completedAt,
         },
@@ -452,7 +458,7 @@ export async function runAnalysis(videoId, resultId) {
     );
 
     console.log(
-      `Highest detected severity: ${highestSeverity}; moderation risk score: ${(topScore * 100).toFixed(2)}%.`,
+      `Highest detected severity: ${highestSeverity}; peak chunk risk score: ${(riskScore * 100).toFixed(2)}%.`,
     );
   } catch (error) {
     console.error('Analysis failed:', error);

@@ -185,7 +185,7 @@ export function BackendModeration() {
         </div>) : (<>
           <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
-              <p className="text-xs text-ink-muted">Overall risk</p>
+              <p className="text-xs text-ink-muted">Peak chunk risk</p>
               <div className="mt-2 flex items-center gap-2">
                 <RiskPill level={result.riskLevel ?? 'safe'}/>
                 <span className="font-mono text-lg font-semibold text-ink">{(result.riskScore ?? 0).toFixed(2)}</span>
