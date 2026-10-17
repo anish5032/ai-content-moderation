@@ -1,0 +1,141 @@
+id,group,comment_text,toxic,severe_toxic,obscene,threat,insult,identity_hate
+N001,neutral_short,You?,0,0,0,0,0,0
+N002,neutral_short,I?,0,0,0,0,0,0
+N003,neutral_short,Me?,0,0,0,0,0,0
+N004,neutral_short,Us?,0,0,0,0,0,0
+N005,neutral_short,Your turn?,0,0,0,0,0,0
+N006,neutral_short,Who me?,0,0,0,0,0,0
+N007,neutral_short,Are we there?,0,0,0,0,0,0
+N008,neutral_short,Ready yet?,0,0,0,0,0,0
+N009,neutral_short,Can you hear me?,0,0,0,0,0,0
+N010,neutral_short,Is this yours?,0,0,0,0,0,0
+N011,neutral_short,What time?,0,0,0,0,0,0
+N012,neutral_short,Which one?,0,0,0,0,0,0
+N013,neutral_short,Maybe later.,0,0,0,0,0,0
+N014,neutral_short,Not today.,0,0,0,0,0,0
+N015,neutral_short,The lamp is on.,0,0,0,0,0,0
+N016,neutral_short,That works.,0,0,0,0,0,0
+N017,neutral_short,Here you go.,0,0,0,0,0,0
+N018,neutral_short,One moment.,0,0,0,0,0,0
+N019,neutral_short,No problem.,0,0,0,0,0,0
+N020,neutral_short,See you soon.,0,0,0,0,0,0
+C001,ordinary_conversation,Good morning everyone.,0,0,0,0,0,0
+C002,ordinary_conversation,Thanks for sending the notes.,0,0,0,0,0,0
+C003,ordinary_conversation,I will call you after lunch.,0,0,0,0,0,0
+C004,ordinary_conversation,Could you explain that again please?,0,0,0,0,0,0
+C005,ordinary_conversation,The meeting starts at three.,0,0,0,0,0,0
+C006,ordinary_conversation,I agree with your suggestion.,0,0,0,0,0,0
+C007,ordinary_conversation,Please leave the package by the door.,0,0,0,0,0,0
+C008,ordinary_conversation,We can discuss it tomorrow.,0,0,0,0,0,0
+C009,ordinary_conversation,That sounds like a useful plan.,0,0,0,0,0,0
+C010,ordinary_conversation,I appreciate your help today.,0,0,0,0,0,0
+C011,ordinary_conversation,Would you like some tea?,0,0,0,0,0,0
+C012,ordinary_conversation,The train is running a little late.,0,0,0,0,0,0
+C013,ordinary_conversation,I am glad you made it.,0,0,0,0,0,0
+C014,ordinary_conversation,Please let me know what you decide.,0,0,0,0,0,0
+C015,ordinary_conversation,We finished the report this morning.,0,0,0,0,0,0
+C016,ordinary_conversation,Could we move the appointment to Friday?,0,0,0,0,0,0
+C017,ordinary_conversation,The blue folder is on your desk.,0,0,0,0,0,0
+C018,ordinary_conversation,That was an interesting point.,0,0,0,0,0,0
+C019,ordinary_conversation,I understand what you mean.,0,0,0,0,0,0
+C020,ordinary_conversation,Have a safe trip home.,0,0,0,0,0,0
+I001,insult,Your judgment is remarkably poor.,1,0,0,0,1,0
+I002,insult,That was a foolish choice.,1,0,0,0,1,0
+I003,insult,You are acting like a jerk.,1,0,0,0,1,0
+I004,insult,What a clueless thing to say.,1,0,0,0,1,0
+I005,insult,You are a complete moron.,1,0,0,0,1,0
+I006,insult,That was a pathetic excuse.,1,0,0,0,1,0
+I007,insult,You are such a loser.,1,0,0,0,1,0
+I008,insult,Only a fool would make that mistake.,1,0,0,0,1,0
+I009,insult,You have no idea what you are doing.,1,0,0,0,1,0
+I010,insult,Your reasoning is embarrassingly stupid.,1,0,0,0,1,0
+I011,insult,You are an obnoxious creep.,1,0,0,0,1,0
+I012,insult,That was a dumb answer.,1,0,0,0,1,0
+I013,insult,You are a selfish clown.,1,0,0,0,1,0
+I014,insult,Nobody asked for your useless opinion.,1,0,0,0,1,0
+I015,insult,You are being ridiculous and annoying.,1,0,0,0,1,0
+I016,insult,What a nasty person you are.,1,0,0,0,1,0
+I017,insult,You are too ignorant to understand this.,1,0,0,0,1,0
+I018,insult,Your work is careless and you are lazy.,1,0,0,0,1,0
+I019,insult,You sound like a pompous fool.,1,0,0,0,1,0
+I020,insult,That was a really idiotic comment.,1,0,0,0,1,0
+P001,profanity_no_threat,This is fucking frustrating.,0,0,1,0,0,0
+P002,profanity_no_threat,That was a damn long day.,0,0,1,0,0,0
+P003,profanity_no_threat,The whole plan fell apart and it sucks.,0,0,1,0,0,0
+P004,profanity_no_threat,What a shitty result.,0,0,1,0,0,0
+P005,profanity_no_threat,I forgot my damn keys again.,0,0,1,0,0,0
+P006,profanity_no_threat,This fucking printer is jammed.,0,0,1,0,0,0
+P007,profanity_no_threat,That movie was crap.,0,0,1,0,0,0
+P008,profanity_no_threat,The damn app crashed before I saved.,0,0,1,0,0,0
+P009,profanity_no_threat,What the hell is going on with this file?,0,0,1,0,0,0
+P010,profanity_no_threat,That was a bloody annoying delay.,0,0,1,0,0,0
+P011,profanity_no_threat,I am so freaking tired of this update.,0,0,1,0,0,0
+P012,profanity_no_threat,This mess is a pain in the ass.,0,0,1,0,0,0
+P013,profanity_no_threat,"The stupid thing broke again, damn it.",0,0,1,0,0,0
+P014,profanity_no_threat,That was one hell of a storm.,0,0,1,0,0,0
+P015,profanity_no_threat,The sauce tastes like crap today.,0,0,1,0,0,0
+P016,profanity_no_threat,Fucking traffic made us late.,0,0,1,0,0,0
+P017,profanity_no_threat,I hate this damn software update.,0,0,1,0,0,0
+P018,profanity_no_threat,The result is crappy but fixable.,0,0,1,0,0,0
+P019,profanity_no_threat,This is a freaking strange coincidence.,0,0,1,0,0,0
+P020,profanity_no_threat,What a crap afternoon.,0,0,1,0,0,0
+T001,short_threat,I will hurt you.,1,0,0,1,0,0
+T002,short_threat,I will find you.,1,0,0,1,0,0
+T003,short_threat,You will pay for this.,1,0,0,1,0,0
+T004,short_threat,I am coming for you.,1,0,0,1,0,0
+T005,short_threat,Watch your back tonight.,1,0,0,1,0,0
+T006,short_threat,I will get you.,1,0,0,1,0,0
+T007,short_threat,You are not safe from me.,1,0,0,1,0,0
+T008,short_threat,I will make you regret this.,1,0,0,1,0,0
+T009,short_threat,Just wait until I see you.,1,0,0,1,0,0
+T010,short_threat,I know where you live.,1,0,0,1,0,0
+T011,short_threat,I will come back and hurt you.,1,0,0,1,0,0
+T012,short_threat,You will be sorry when I find you.,1,0,0,1,0,0
+T013,longer_threat,"If you report me, I will come find you after work.",1,0,0,1,0,0
+T014,longer_threat,I will wait outside the office and hurt you when you leave.,1,0,0,1,0,0
+T015,longer_threat,Keep talking and I will make sure you regret it tomorrow.,1,0,0,1,0,0
+T016,longer_threat,"If you do not give that back, I will come to your house and hurt you.",1,0,0,1,0,0
+T017,longer_threat,I know your routine and I will be waiting for you tonight.,1,0,0,1,0,0
+T018,longer_threat,"When this meeting ends, I am going to find you and make you pay.",1,0,0,1,0,0
+T019,longer_threat,Refuse again and I will come back with friends to hurt you.,1,0,0,1,0,0
+T020,longer_threat,"You can leave now, but I will track you down and attack you later.",1,0,0,1,0,0
+S001,severe_toxicity,You are a worthless excuse for a person and everyone should despise you.,1,1,0,0,1,0
+S002,severe_toxicity,Your existence makes every room worse and nobody could ever respect you.,1,1,0,0,1,0
+S003,severe_toxicity,You are disgusting inside and out and deserve nothing but contempt.,1,1,0,0,1,0
+S004,severe_toxicity,Everyone would be better off if they never had to hear from you again.,1,1,0,0,1,0
+S005,severe_toxicity,You are so vile that decent people should be ashamed to know you.,1,1,0,0,1,0
+S006,severe_toxicity,You are a pathetic waste of everyone's time and effort.,1,1,0,0,1,0
+S007,severe_toxicity,There is nothing good about you and people should be repulsed by you.,1,1,0,0,1,0
+S008,severe_toxicity,You are a deeply rotten person who deserves universal scorn.,1,1,0,0,1,0
+S009,severe_toxicity,Your presence is unbearable and everyone should reject you.,1,1,0,0,1,0
+S010,severe_toxicity,You are so revolting that nobody should want you around.,1,1,0,0,1,0
+S011,severe_toxicity,You are a miserable failure and a disgrace to everyone who knows you.,1,1,0,0,1,0
+S012,severe_toxicity,You are utterly contemptible and do not deserve anyone's kindness.,1,1,0,0,1,0
+S013,severe_toxicity,People like you ruin everything and should be shunned by everyone.,1,1,0,0,1,0
+S014,severe_toxicity,You are a disgusting burden and nobody should care what happens to you.,1,1,0,0,1,0
+S015,severe_toxicity,Your character is so rotten that no one should trust or respect you.,1,1,0,0,1,0
+S016,severe_toxicity,You are repulsive and the world would be cleaner without your influence.,1,1,0,0,1,0
+S017,severe_toxicity,You are a cruel and worthless person who deserves only rejection.,1,1,0,0,1,0
+S018,severe_toxicity,Everything about you is vile and people should avoid you completely.,1,1,0,0,1,0
+S019,severe_toxicity,You are an unbearable disgrace and nobody should have to tolerate you.,1,1,0,0,1,0
+S020,severe_toxicity,You are a truly awful human being and deserve everyone's disgust.,1,1,0,0,1,0
+H001,identity_hate,People from [protected group] should not be allowed in our neighborhood.,1,0,0,0,0,1
+H002,identity_hate,Keep [protected group] out of public meetings because they do not belong.,1,0,0,0,0,1
+H003,identity_hate,[Protected group] should have fewer rights than everyone else.,1,0,0,0,0,1
+H004,identity_hate,Our school should refuse to enroll anyone from [protected group].,1,0,0,0,0,1
+H005,identity_hate,People of [protected group] should not be hired for public jobs.,1,0,0,0,0,1
+H006,identity_hate,Do not rent homes to members of [protected group].,1,0,0,0,0,1
+H007,identity_hate,[Protected group] should be excluded from local decision making.,1,0,0,0,0,1
+H008,identity_hate,People belonging to [protected group] are not welcome at this club.,1,0,0,0,0,1
+H009,identity_hate,We should deny public services to [protected group].,1,0,0,0,0,1
+H010,identity_hate,Members of [protected group] should not be permitted to vote here.,1,0,0,0,0,1
+H011,identity_hate,Do not let [protected group] join our community association.,1,0,0,0,0,1
+H012,identity_hate,People from [protected group] should be barred from this profession.,1,0,0,0,0,1
+H013,identity_hate,[Protected group] should not be invited to participate in civic life.,1,0,0,0,0,1
+H014,identity_hate,Our town should reject every application from [protected group].,1,0,0,0,0,1
+H015,identity_hate,People of [protected group] should be forced out of this organization.,1,0,0,0,0,1
+H016,identity_hate,This housing program should reject applicants from [protected group].,1,0,0,0,0,1
+H017,identity_hate,Do not give leadership roles to people from [protected group].,1,0,0,0,0,1
+H018,identity_hate,[Protected group] should be kept away from our public spaces.,1,0,0,0,0,1
+H019,identity_hate,People who belong to [protected group] should not attend this school.,1,0,0,0,0,1
+H020,identity_hate,We should exclude [protected group] from equal participation.,1,0,0,0,0,1
