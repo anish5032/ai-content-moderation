@@ -1,26 +1,26 @@
 # ModeraAI Node.js backend
 
-Express + MongoDB backend replacing the previous FastAPI/Python API. The React frontend and `/api/...` routes are kept compatible.
+Express + MongoDB backend for the ModerAI content moderation workflow. The app keeps the React UI and `/api/...` routes compatible while connecting to a real text-toxicity model over the local ML service.
 
 ## Structure
 - `server.js` starts the backend and manages shutdown.
 - `app.js` configures Express and mounts the API routers.
 - `routes/` maps endpoints to request middleware and controllers.
 - `controllers/` handles HTTP input and response behavior.
-- `services/` contains database-facing operations and moderation analysis.
+- `services/` contains database-facing operations, moderation analysis, and transcription orchestration.
 - `middleware/` contains authentication, upload handling, and error responses.
 - `config.js` and `db.js` centralize application settings and MongoDB setup.
 
 ## Requirements
 - Node.js 20+
 - MongoDB running locally or a MongoDB Atlas connection string
+- Python ML service on `http://127.0.0.1:8000` or a custom `ML_SERVICE_URL`
 
 ## Run
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Set MONGODB_URI and replace JWT_SECRET in .env
+# Set MONGODB_URI and replace JWT_SECRET in .env if needed
 npm run dev
 ```
 
@@ -36,5 +36,5 @@ API health: http://localhost:5000/api/health
 - `GET /api/reviews?status=pending|resolved|all`
 - `POST /api/events/:eventId/decision` with `{ "action": "allow|flag|mute|blur|block", "reason": "optional" }`
 
-## Important limitation
-The analyzer is intentionally a deterministic **placeholder**, ported from the previous backend. It does not actually inspect video frames, audio, or speech yet. Replace `analyzeChunk()` and the `runAnalysis()` pipeline with real models when ready. The browser UI is unchanged and its demo mode remains enabled by default.
+## Current behavior
+The backend now calls the ML service for text toxicity prediction, then applies central moderation thresholds and a neutral-short-text guard before creating moderation events. The system still focuses on the text/transcript path; visual and audio moderation remain outside this scope.

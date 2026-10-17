@@ -10,7 +10,6 @@ MODEL_PATH = BASE_DIR / "models" / "text_toxicity_model.joblib"
 
 app = FastAPI(title="ModerAI ML Service", version="1.0.0")
 
-# Load the trained model once when the service starts.
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"Trained model not found: {MODEL_PATH}")
 
@@ -30,6 +29,7 @@ def health():
         "service": "ModerAI ML Service",
         "model_loaded": True,
         "labels": labels,
+        "model_type": "TF-IDF + One-vs-Rest Logistic Regression",
     }
 
 
@@ -44,14 +44,15 @@ def predict_text(request: TextRequest):
         )
 
     probabilities = model.predict_proba([text])[0]
-
     scores = {
-        label: round(float(score), 4)
+        label: round(float(score), 6)
         for label, score in zip(labels, probabilities)
     }
 
     return {
         "text": text,
         "scores": scores,
-        "model": "TF-IDF + Logistic Regression",
+        "model": "TF-IDF + One-vs-Rest Logistic Regression",
+        "label_order": labels,
+        "score_type": "raw model score",
     }

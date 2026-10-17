@@ -73,3 +73,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Experimental candidate model artifacts
+ml-service/models/candidates/

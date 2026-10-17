@@ -19,15 +19,7 @@ const categoryLabels = {
   identity_hate: 'Identity Hate',
 };
 
-// Experimental thresholds; validate on a separate validation set.
-const CATEGORY_THRESHOLDS = {
-  toxic: 0.70,
-  severe_toxic: 0.70,
-  obscene: 0.70,
-  threat: 0.50,
-  insult: 0.70,
-  identity_hate: 0.70,
-};
+const CATEGORY_THRESHOLDS = config.moderationThresholds;
 
 const severityRank = {
   safe: 0,
@@ -62,6 +54,49 @@ function getWordCount(text) {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function hasHarmfulLexicon(text) {
+  const normalized = text.toLowerCase();
+  const keywords = [
+    'kill', 'die', 'attack', 'stab', 'shoot', 'bomb', 'murder',
+    'hate', 'slur', 'nazi', 'idiot', 'stupid', 'scum', 'hate speech',
+    'freak', 'loser', 'worthless', 'burn', 'hurt', 'threat',
+  ];
+  return keywords.some(keyword => normalized.includes(keyword));
+}
+
+function shouldTreatAsNeutralShortText(text) {
+  const words = getWordCount(text);
+  if (words > 8) {
+    return false;
+  }
+
+  const normalized = text.toLowerCase();
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  const hasQuestionOrExclamation = /[?!.]/.test(normalized);
+  const hasHarmfulSignal = hasHarmfulLexicon(normalized);
+
+  if (hasHarmfulSignal) {
+    return false;
+  }
+
+  const neutralPatterns = [
+    /^hi+$/,
+    /^oh+$/,
+    /^no+$/,
+    /^yes+$/,
+    /^thanks?$/,
+    /^hello+$/,
+    /^(do you want|can you|could you|what do|how do|where are|i am|i\'m|it\'s hot|careful)/,
+  ];
+
+  const isNeutralPattern = neutralPatterns.some(pattern => pattern.test(normalized.replace(/[^a-z0-9\s'?-]/g, '')));
+
+  return isNeutralPattern || (!hasQuestionOrExclamation && !/[0-9]/.test(normalized) && words <= 6);
+}
+
 function severityForDetections(detectedEntries) {
   let highestSeverity = 'safe';
 
@@ -69,16 +104,18 @@ function severityForDetections(detectedEntries) {
     let severity = 'moderate';
 
     if (category === 'threat' || category === 'severe_toxic') {
-      if (score >= 0.85) {
+      if (score >= 0.9) {
         severity = 'critical';
-      } else if (score >= 0.65) {
+      } else if (score >= 0.75) {
         severity = 'high';
       }
     } else if (
       category === 'identity_hate' ||
       category === 'toxic'
     ) {
-      severity = score >= 0.85 ? 'high' : 'moderate';
+      severity = score >= 0.82 ? 'high' : 'moderate';
+    } else if (category === 'obscene' || category === 'insult') {
+      severity = score >= 0.8 ? 'high' : 'moderate';
     }
 
     if (severityRank[severity] > severityRank[highestSeverity]) {
@@ -133,6 +170,32 @@ export async function analyzeText(text) {
   const score = detectedTopEntry ? detectedTopEntry[1] : 0;
   const detectedLabels = detectedEntries.map(([category]) => category);
   const topCategoryName = categoryLabels[topCategory] || topCategory;
+  const isNeutralShortText = shouldTreatAsNeutralShortText(text);
+
+  if (isNeutralShortText && detectedLabels.length > 0) {
+    const filteredLabels = detectedLabels.filter(category => !['toxic', 'insult', 'obscene'].includes(category));
+    const filteredEntries = entries.filter(([category]) => filteredLabels.includes(category));
+    const safeDetectedEntries = filteredEntries.filter(([category, value]) => value >= (CATEGORY_THRESHOLDS[category] ?? 0.5));
+    if (safeDetectedEntries.length === 0) {
+      return {
+        modality: 'text',
+        model: prediction.model,
+        label: labels.text,
+        score: 0,
+        rawTopScore: rawTopEntry[1],
+        level: 'safe',
+        topCategory: null,
+        topCategoryName: null,
+        topCategoryScore: 0,
+        tags: [],
+        threat: 'No category reached its configured detection threshold after neutral-short-text guard',
+        categoryScores,
+        thresholds: CATEGORY_THRESHOLDS,
+        isPlaceholder: false,
+        decision: 'allow',
+      };
+    }
+  }
 
   return {
     modality: 'text',
@@ -151,7 +214,9 @@ export async function analyzeText(text) {
           .join(', ')}`
       : 'No category reached its configured detection threshold',
     categoryScores,
+    thresholds: CATEGORY_THRESHOLDS,
     isPlaceholder: false,
+    decision: detectedLabels.length ? 'flag' : 'allow',
   };
 }
 

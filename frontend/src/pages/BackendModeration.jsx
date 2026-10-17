@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RefreshCw, ScanSearch, Video as VideoIcon } from 'lucide-react';
 import { EventFeed } from '../components/EventFeed';
@@ -15,44 +15,65 @@ export function BackendModeration() {
     const [searchParams, setSearchParams] = useSearchParams();
     const requestedId = searchParams.get('video') ?? '';
     const [videos, setVideos] = useState([]);
-    const [selectedId, setSelectedId] = useState(requestedId);
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
+    const activeRequestRef = useRef(0);
+    const selectedId = useMemo(() => {
+        if (requestedId && videos.some(video => video.id === requestedId))
+            return requestedId;
+        return videos[0]?.id ?? '';
+    }, [requestedId, videos]);
     const selectedVideo = useMemo(() => videos.find(video => video.id === selectedId) ?? null, [videos, selectedId]);
-    const load = useCallback(async (videoId = selectedId) => {
+    const syncUrlToSelection = useCallback((nextId, replace = false) => {
+        if (!nextId)
+            return;
+        const currentId = searchParams.get('video') ?? '';
+        if (currentId !== nextId)
+            setSearchParams({ video: nextId }, { replace });
+    }, [searchParams, setSearchParams]);
+    const load = useCallback(async (videoId = requestedId) => {
+        const requestToken = ++activeRequestRef.current;
         setLoading(true);
         try {
             const items = await videoApi.list();
-            const video = items.find(item => item.id === videoId) ?? items[0] ?? null;
+            if (requestToken !== activeRequestRef.current)
+                return;
             setVideos(items);
-            setSelectedId(video?.id ?? '');
-            if (!video) {
+            const nextId = items.find(item => item.id === videoId)?.id ?? items[0]?.id ?? '';
+            if (!nextId) {
                 setResult(null);
-                setSearchParams({}, { replace: true });
+                return;
             }
-            else {
-                setSearchParams({ video: video.id }, { replace: true });
-                try {
-                    setResult(await videoApi.result(video.id));
-                }
-                catch (caught) {
-                    if (!(caught instanceof ApiError && caught.status === 404))
-                        throw caught;
-                    setResult(null);
-                }
+            if (requestedId !== nextId)
+                syncUrlToSelection(nextId, true);
+            try {
+                const nextResult = await videoApi.result(nextId);
+                if (requestToken !== activeRequestRef.current)
+                    return;
+                setResult(nextResult);
+            }
+            catch (caught) {
+                if (requestToken !== activeRequestRef.current)
+                    return;
+                if (!(caught instanceof ApiError && caught.status === 404))
+                    throw caught;
+                setResult(null);
             }
             setError(null);
         }
         catch (caught) {
+            if (requestToken !== activeRequestRef.current)
+                return;
             setError(errorMessage(caught));
         }
         finally {
-            setLoading(false);
+            if (requestToken === activeRequestRef.current)
+                setLoading(false);
         }
-    }, [selectedId, setSearchParams]);
+    }, [requestedId, searchParams, setSearchParams, syncUrlToSelection]);
     useEffect(() => {
         void load(requestedId);
     }, [load, requestedId]);
@@ -125,7 +146,13 @@ export function BackendModeration() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="min-w-0 flex-1 text-xs font-medium text-ink-muted">
             Select a video
-            <select value={selectedId} onChange={event => { void load(event.target.value); }} className="mt-1.5 w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm text-ink">
+            <select value={selectedId} onChange={event => {
+                const nextId = event.target.value;
+                if (!nextId)
+                    setSearchParams({}, { replace: false });
+                else
+                    setSearchParams({ video: nextId });
+            }} className="mt-1.5 w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm text-ink">
               {videos.length === 0 && <option value="">No videos uploaded</option>}
               {videos.map(video => <option key={video.id} value={video.id}>{video.name}</option>)}
             </select>

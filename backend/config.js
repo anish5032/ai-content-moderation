@@ -3,6 +3,15 @@ import { fileURLToPath } from 'node:url';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 
+export const defaultModerationThresholds = {
+  toxic: 0.72,
+  severe_toxic: 0.82,
+  obscene: 0.72,
+  threat: 0.9,
+  insult: 0.74,
+  identity_hate: 0.82,
+};
+
 export const config = {
   port: Number(process.env.PORT || 5000),
   mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000',
@@ -20,6 +29,12 @@ export const config = {
   allowRegistration: (process.env.ALLOW_REGISTRATION || 'true').toLowerCase() === 'true',
   chunkSeconds: Math.max(1, Number(process.env.CHUNK_SECONDS || 2)),
   defaultDurationSeconds: Number(process.env.DEFAULT_DURATION_SECONDS || 30),
+  moderationThresholds: {
+    ...defaultModerationThresholds,
+    ...(process.env.MODERATION_THRESHOLDS
+      ? JSON.parse(process.env.MODERATION_THRESHOLDS)
+      : {}),
+  },
 };
 
 export const MAX_CHUNKS = 5400;
