@@ -116,7 +116,7 @@ export function BackendModeration() {
           </button>}/>
 
       <DemoNotice>
-        Results use the backend placeholder analyzer. Scores are demo outputs, not real model assessments. Video playback is not available because the API does not expose stored media.
+        Text moderation uses Whisper speech transcription and the trained text toxicity model. Visual content moderation and non-speech audio analysis are not yet implemented. Video playback is unavailable because the backend API does not currently expose stored media.
       </DemoNotice>
 
       {error && <p role="alert" className="mb-4 rounded-lg bg-critical/10 px-3.5 py-2.5 text-xs text-critical ring-1 ring-inset ring-critical/25">{error}</p>}

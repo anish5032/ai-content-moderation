@@ -1,127 +1,312 @@
+
 import { config, MAX_CHUNKS } from '../config.js';
 import { getDb } from '../db.js';
 import { createId, now } from '../utils/common.js';
+import { predictText } from './mlService.js';
+import { transcribeVideo } from './transcriptionService.js';
+import { resolveStored } from './videoService.js';
 
-const modalities = ['visual', 'audio', 'text'];
-const modelNames = { visual: 'Vision Model', audio: 'Audio Model', text: 'Text Model' };
-const labels = { visual: 'Visual Risk', audio: 'Speech Risk', text: 'Caption / STT Toxicity' };
-const threats = { visual: 'Graphic violence', audio: 'Harmful speech', text: 'Toxicity detected' };
-const clearTags = {
-  visual: ['Safe imagery', 'No violence'],
-  audio: ['Neutral tone', 'No profanity'],
-  text: ['Clean captions'],
+const labels = {
+  text: 'Speech / Transcript Toxicity',
 };
-const elevatedTags = {
-  visual: ['Violence', 'Graphic frame', 'Weapon detected', 'Suggestive imagery'],
-  audio: ['Harmful language', 'Abusive speech', 'Threatening tone', 'Slur detected'],
-  text: ['Toxicity detected', 'Harassment', 'Hate keyword', 'Profanity chip'],
+
+const categoryLabels = {
+  toxic: 'Toxic',
+  severe_toxic: 'Severe Toxicity',
+  obscene: 'Obscene',
+  threat: 'Threat',
+  insult: 'Insult',
+  identity_hate: 'Identity Hate',
 };
-const dominantScores = { safe: 0.09, low: 0.27, moderate: 0.57, high: 0.79, critical: 0.92 };
 
-function hash(seed) {
-  const value = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
-  return value - Math.floor(value);
+// Experimental thresholds; validate on a separate validation set.
+const CATEGORY_THRESHOLDS = {
+  toxic: 0.70,
+  severe_toxic: 0.70,
+  obscene: 0.70,
+  threat: 0.50,
+  insult: 0.70,
+  identity_hate: 0.70,
+};
+
+const severityRank = {
+  safe: 0,
+  low: 1,
+  moderate: 2,
+  high: 3,
+  critical: 4,
+};
+
+function timecode(seconds) {
+  const value = Math.max(0, Math.floor(seconds));
+
+  return `${String(Math.floor(value / 3600)).padStart(2, '0')}:${String(
+    Math.floor((value % 3600) / 60),
+  ).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
 }
 
-function scoreToLevel(score) {
-  if (score >= 0.85) return 'critical';
-  if (score >= 0.65) return 'high';
-  if (score >= 0.4) return 'moderate';
-  if (score >= 0.2) return 'low';
-  return 'safe';
+function transcriptForChunk(segments, startSeconds, endSeconds) {
+  return segments
+    .filter(segment => {
+      const start = Number(segment.start) / 1000;
+      const end = Number(segment.end) / 1000;
+      return start < endSeconds && end > startSeconds;
+    })
+    .map(segment => String(segment.text || '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
 
-function tagsFor(modality, score, seed) {
-  if (score < 0.35) return clearTags[modality];
-  const pool = elevatedTags[modality];
-  const first = pool[Math.floor(hash(seed) * pool.length) % pool.length];
-  if (score < 0.7) return [first];
-  const second = pool[Math.floor(hash(seed + 5) * pool.length) % pool.length];
-  return second === first ? [first] : [first, second];
+function getWordCount(text) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function analyzeChunk(chunkId) {
-  let level = 'safe';
-  let primary = 'visual';
+function severityForDetections(detectedEntries) {
+  let highestSeverity = 'safe';
 
-  if (hash(chunkId) >= 0.74) {
-    primary = modalities[Math.floor(hash(chunkId + 91) * modalities.length) % modalities.length];
-    const severity = hash(chunkId + 17);
-    level = severity > 0.93 ? 'critical' : severity > 0.72 ? 'high' : severity > 0.4 ? 'moderate' : 'low';
+  for (const [category, score] of detectedEntries) {
+    let severity = 'moderate';
+
+    if (category === 'threat' || category === 'severe_toxic') {
+      if (score >= 0.85) {
+        severity = 'critical';
+      } else if (score >= 0.65) {
+        severity = 'high';
+      }
+    } else if (
+      category === 'identity_hate' ||
+      category === 'toxic'
+    ) {
+      severity = score >= 0.85 ? 'high' : 'moderate';
+    }
+
+    if (severityRank[severity] > severityRank[highestSeverity]) {
+      highestSeverity = severity;
+    }
   }
 
-  const signals = modalities.map(modality => {
-    const raw = modality === primary && level !== 'safe'
-      ? dominantScores[level] + (hash(chunkId * 7 + modality.length) - 0.5) * 0.08
-      : 0.06 + hash(chunkId * 13 + modality.length * 3) * 0.24;
-    const score = Math.round(Math.min(0.99, Math.max(0.01, raw)) * 100) / 100;
-    return {
-      modality,
-      model: modelNames[modality],
-      label: labels[modality],
-      score,
-      level: scoreToLevel(score),
-      tags: tagsFor(modality, score, chunkId * 3 + modality.length),
-    };
-  });
-
-  return { signals, primary, threat: level !== 'safe' ? threats[primary] : 'No policy violation' };
+  return highestSeverity;
 }
 
-function compositeScore(scores) {
-  const top = Math.max(...scores);
-  const rest = (scores.reduce((total, score) => total + score, 0) - top) / 2;
-  return Math.round(Math.min(0.99, top * 0.9 + rest * 0.28) * 100) / 100;
+export async function analyzeText(text) {
+  const prediction = await predictText(text);
+  const rawScores = prediction.scores;
+
+  if (
+    !rawScores ||
+    typeof rawScores !== 'object' ||
+    Array.isArray(rawScores) ||
+    Object.keys(rawScores).length === 0
+  ) {
+    throw new Error('Text toxicity model returned no category scores.');
+  }
+
+  const entries = Object.entries(rawScores).map(([category, value]) => [
+    category,
+    Number(value),
+  ]);
+
+  if (
+    entries.some(
+      ([, value]) => !Number.isFinite(value) || value < 0 || value > 1,
+    )
+  ) {
+    throw new Error('Text toxicity model returned invalid category scores.');
+  }
+
+  const categoryScores = Object.fromEntries(entries);
+
+  const detectedEntries = entries.filter(([category, score]) => {
+    const threshold = CATEGORY_THRESHOLDS[category];
+    return threshold !== undefined && score >= threshold;
+  });
+
+  const rawTopEntry = [...entries].sort((a, b) => b[1] - a[1])[0];
+  const detectedTopEntry =
+    [...detectedEntries].sort((a, b) => b[1] - a[1])[0] || null;
+
+  const [topCategory, topCategoryScore] =
+    detectedTopEntry || rawTopEntry;
+
+  const level = severityForDetections(detectedEntries);
+  const score = detectedTopEntry ? detectedTopEntry[1] : 0;
+  const detectedLabels = detectedEntries.map(([category]) => category);
+  const topCategoryName = categoryLabels[topCategory] || topCategory;
+
+  return {
+    modality: 'text',
+    model: prediction.model,
+    label: labels.text,
+    score: Math.round(score * 10000) / 10000,
+    rawTopScore: rawTopEntry[1],
+    level,
+    topCategory,
+    topCategoryName,
+    topCategoryScore: Math.round(topCategoryScore * 10000) / 10000,
+    tags: detectedLabels,
+    threat: detectedLabels.length
+      ? `Detected: ${detectedLabels
+          .map(category => categoryLabels[category] || category)
+          .join(', ')}`
+      : 'No category reached its configured detection threshold',
+    categoryScores,
+    isPlaceholder: false,
+  };
+}
+
+// Model detections are sent for human review, not automatically blocked.
+function recommendedAction() {
+  return 'flag';
 }
 
 function confidenceFor(score) {
+  // Display heuristic only; not measured model confidence.
   return Math.round(Math.min(0.99, 0.78 + score * 0.18) * 100) / 100;
 }
 
-function recommendedAction(level, primary) {
-  if (level === 'critical') return 'block';
-  if (level === 'high') return primary === 'visual' ? 'blur' : 'mute';
-  if (level === 'moderate') return 'flag';
-  return 'allow';
-}
+function buildReason(chunkId, start, end, signal) {
+  const window = `${timecode(start)} - ${timecode(end)}`;
 
-function timecode(seconds) {
-  const wholeSeconds = Math.max(0, Math.floor(seconds));
-  return `${String(Math.floor(wholeSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((wholeSeconds % 3600) / 60)).padStart(2, '0')}:${String(wholeSeconds % 60).padStart(2, '0')}`;
-}
-
-function buildReason(chunkId, start, end, level, primary, threat) {
-  const window = `${timecode(start)} – ${timecode(end)}`;
-  if (level === 'safe' || level === 'low') {
-    return `No policy violation detected in chunk #${chunkId} (${window}). All three modalities are below threshold.`;
+  if (signal.level === 'safe') {
+    return `Text model found no category above its configured detection threshold in chunk #${chunkId} (${window}). Highest raw category: ${signal.topCategoryName} (${(signal.rawTopScore * 100).toFixed(2)}%).`;
   }
-  const channel = primary === 'audio' ? 'Audio' : primary === 'text' ? 'Captions / STT' : 'Visual frames';
-  return `${channel} contain inappropriate content at ${window}. Trigger: ${threat}.`;
+
+  const shortWarning = signal.isShortTranscript
+    ? ' Warning: this is a short transcript, so the prediction may be unreliable.'
+    : '';
+
+  return `Transcript in chunk #${chunkId} (${window}) triggered a ${signal.level} text assessment. Strongest detected category: ${signal.topCategoryName} (${(signal.topCategoryScore * 100).toFixed(2)}%). Detected categories: ${signal.tags.join(', ')}. Human review is required.${shortWarning}`;
 }
 
 export async function runAnalysis(videoId, resultId) {
   try {
     const database = getDb();
-    const video = await database.collection('videos').findOne({ _id: videoId });
-    if (!video) return;
 
-    const duration = Number(video.durationSeconds || config.defaultDurationSeconds);
-    const count = Math.min(MAX_CHUNKS, Math.max(1, Math.ceil(duration / config.chunkSeconds)));
+    const video = await database.collection('videos').findOne({
+      _id: videoId,
+    });
+
+    if (!video) {
+      throw new Error(`Video not found: ${videoId}`);
+    }
+
+    const duration = Number(
+      video.durationSeconds || config.defaultDurationSeconds,
+    );
+
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new Error('Video duration is invalid.');
+    }
+
+    const count = Math.min(
+      MAX_CHUNKS,
+      Math.max(1, Math.ceil(duration / config.chunkSeconds)),
+    );
+
+    const transcription = await transcribeVideo(
+      resolveStored(video.storagePath),
+    );
+
+    console.log(
+      `Whisper transcribed ${transcription.segments.length} segments.`,
+    );
+
     const events = [];
     let topScore = 0;
+    let strongestSignal = null;
+    let highestSeverity = 'safe';
 
     for (let index = 0; index < count; index += 1) {
       const chunkId = index + 1;
       const start = index * config.chunkSeconds;
-      const end = Math.min((index + 1) * config.chunkSeconds, duration);
-      const analysis = analyzeChunk(chunkId);
-      const composite = compositeScore(analysis.signals.map(signal => signal.score));
-      const level = scoreToLevel(composite);
-      topScore = Math.max(topScore, composite);
-      if (level === 'safe') continue;
+      const end = Math.min(
+        (index + 1) * config.chunkSeconds,
+        duration,
+      );
 
-      const action = recommendedAction(level, analysis.primary);
-      const needsHuman = action !== 'allow';
+      const text = transcriptForChunk(
+        transcription.segments,
+        start,
+        end,
+      );
+
+      // No speech means no text score.
+      // Visual and non-speech audio moderation are not implemented.
+      if (!text) {
+        continue;
+      }
+
+      const signal = await analyzeText(text);
+
+      signal.model = `Whisper + ${signal.model}`;
+      signal.transcript = text;
+      signal.isPlaceholder = false;
+
+      const wordCount = getWordCount(text);
+      signal.isShortTranscript = wordCount <= 2;
+
+      if (signal.isShortTranscript) {
+        signal.shortTranscriptWarning =
+          'Short transcript: model predictions may be unreliable.';
+
+        const hasHighRiskCategory = signal.tags.some(category =>
+          ['threat', 'severe_toxic'].includes(category),
+        );
+
+        // A short Toxic-only prediction is insufficient to create
+        // a moderation event. Preserve other detected categories.
+        if (!hasHighRiskCategory) {
+          const remainingTags = signal.tags.filter(
+            category => category !== 'toxic',
+          );
+
+          signal.tags = remainingTags;
+          signal.threat = remainingTags.length
+            ? `Detected: ${remainingTags
+                .map(category => categoryLabels[category] || category)
+                .join(', ')}`
+            : 'Short transcript requires caution; no high-risk category detected';
+
+          if (remainingTags.length === 0) {
+            signal.level = 'safe';
+            signal.score = 0;
+          }
+        }
+      }
+
+      console.log('[ModerAI DEBUG]', {
+        chunkId,
+        transcript: text,
+        rawTopScore: signal.rawTopScore,
+        detectedCategories: signal.tags,
+        severity: signal.level,
+        shortTranscript: signal.isShortTranscript,
+      });
+
+      // Retain the strongest raw prediction for the result summary.
+      if (
+        !strongestSignal ||
+        signal.rawTopScore > strongestSignal.rawTopScore
+      ) {
+        strongestSignal = signal;
+      }
+
+      if (signal.score > topScore) {
+        topScore = signal.score;
+      }
+
+      if (severityRank[signal.level] > severityRank[highestSeverity]) {
+        highestSeverity = signal.level;
+      }
+
+      // Do not create an event if no category remains detected.
+      if (signal.level === 'safe') {
+        continue;
+      }
+
+      const action = recommendedAction(signal.level);
+
       events.push({
         _id: createId(),
         videoId,
@@ -131,41 +316,104 @@ export async function runAnalysis(videoId, resultId) {
         startSeconds: start,
         endSeconds: end,
         timecode: timecode(start),
-        modality: analysis.primary,
-        threat: analysis.threat,
-        score: composite,
+        modality: 'text',
+        threat: signal.threat,
+        score: signal.score,
+        rawTopScore: signal.rawTopScore,
+        topCategory: signal.topCategory,
+        topCategoryName: signal.topCategoryName,
+        topCategoryScore: signal.topCategoryScore,
+        categoryScores: signal.categoryScores,
         action,
-        confidence: confidenceFor(composite),
-        reason: buildReason(chunkId, start, end, level, analysis.primary, analysis.threat),
-        signals: analysis.signals,
-        reviewed: !needsHuman,
-        review: { status: needsHuman ? 'pending' : 'resolved' },
+        confidence: confidenceFor(signal.score),
+        reason: buildReason(chunkId, start, end, signal),
+        transcript: text,
+        signals: [signal],
+        reviewed: false,
+        review: {
+          status: 'pending',
+        },
         createdAt: now(),
       });
     }
 
-    if (events.length) await database.collection('moderation_events').insertMany(events);
-    const pending = events.filter(event => event.review.status === 'pending').length;
+    if (events.length) {
+      await database.collection('moderation_events').insertMany(events);
+    }
+
+    const pending = events.filter(
+      event => event.review.status === 'pending',
+    ).length;
+
     const completedAt = now();
-    const riskLevel = scoreToLevel(topScore);
+
     await database.collection('moderation_results').updateOne(
       { _id: resultId },
-      { $set: { status: 'completed', riskLevel, riskScore: topScore, chunkCount: count, flaggedCount: events.length, completedAt } },
+      {
+        $set: {
+          status: 'completed',
+          riskLevel: highestSeverity,
+          riskScore: topScore,
+          topCategory: strongestSignal?.topCategory ?? null,
+          topCategoryName: strongestSignal?.topCategoryName ?? null,
+          categoryScores: strongestSignal?.categoryScores ?? {},
+          chunkCount: count,
+          flaggedCount: events.length,
+          transcript: transcription.text,
+          transcriptSegmentCount: transcription.segments.length,
+          analyzer: 'whisper-base+text-toxicity-v1',
+          modalitiesAnalyzed: ['text'],
+          unavailableModalities: ['visual', 'audio'],
+          completedAt,
+        },
+      },
     );
+
     await database.collection('videos').updateOne(
       { _id: videoId },
-      { $set: { status: pending ? 'needs_review' : 'ready', riskLevel, riskScore: topScore, error: null, updatedAt: completedAt } },
+      {
+        $set: {
+          status: pending ? 'needs_review' : 'ready',
+          riskLevel: highestSeverity,
+          riskScore: topScore,
+          error: null,
+          updatedAt: completedAt,
+        },
+      },
+    );
+
+    console.log(
+      `ModerAI text analysis completed: ${count} chunks, ${events.length} flagged events.`,
+    );
+
+    console.log(
+      `Highest detected severity: ${highestSeverity}; moderation risk score: ${(topScore * 100).toFixed(2)}%.`,
     );
   } catch (error) {
     console.error('Analysis failed:', error);
+
     const database = getDb();
+
     await database.collection('moderation_results').updateOne(
       { _id: resultId },
-      { $set: { status: 'failed', completedAt: now() } },
+      {
+        $set: {
+          status: 'failed',
+          error: error.message,
+          completedAt: now(),
+        },
+      },
     );
+
     await database.collection('videos').updateOne(
       { _id: videoId },
-      { $set: { status: 'failed', error: 'Analysis failed. Please try again.', updatedAt: now() } },
+      {
+        $set: {
+          status: 'failed',
+          error: 'Analysis failed. Please try again.',
+          updatedAt: now(),
+        },
+      },
     );
   }
 }

@@ -56,3 +56,20 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+# Dataset files
+ml-service/data/
+
+# Whisper model binaries and local test artifacts
+ml-service/models/whisper/
+
+# Local backup
+backend/services/analysisService.backup.js
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.*
+!.env.example

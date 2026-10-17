@@ -5,6 +5,7 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 
 export const config = {
   port: Number(process.env.PORT || 5000),
+  mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000',
   environment: process.env.ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'dev-only-change-me-dev-only-change-me',
   jwtExpireMinutes: Number(process.env.JWT_EXPIRE_MINUTES || 720),
