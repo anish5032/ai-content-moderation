@@ -57,7 +57,10 @@ __pycache__/
 *.sln
 *.sw?
 # Dataset files
-ml-service/data/
+ml-service/data/*
+!ml-service/data/evaluation/
+ml-service/data/evaluation/*
+!ml-service/data/evaluation/toxicity_eval_v1.csv
 
 # Whisper model binaries and local test artifacts
 ml-service/models/whisper/
