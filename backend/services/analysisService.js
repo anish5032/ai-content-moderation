@@ -152,7 +152,8 @@ export function peakVideoRiskScore(chunkScores) {
   );
 }
 
-function combineModerationRisk({ textSeverity, visualAnalysis }) {
+
+export function combineModerationRisk({ textSeverity, visualAnalysis }) {
   const rank = {
     safe: 0,
     low: 1,
@@ -161,35 +162,51 @@ function combineModerationRisk({ textSeverity, visualAnalysis }) {
     critical: 4,
   };
 
-  // Keep text severity from the existing text pipeline.
   let combinedSeverity =
     rank[textSeverity] !== undefined ? textSeverity : "safe";
 
-  // The vision classifier is not calibrated, so do not
-  // convert its raw scores directly into a probability.
+  const visualCompleted = visualAnalysis?.status === "completed";
+
   const visualFlagged =
-    visualAnalysis?.status === "completed" &&
+    visualCompleted &&
     Number(visualAnalysis.flaggedFrameCount) > 0;
 
-  // A visual flag requires human review. It does not
-  // automatically imply a critical risk level.
+  // A visual flag requires human review.
   if (visualFlagged && rank[combinedSeverity] < rank.moderate) {
     combinedSeverity = "moderate";
+  }
+
+  // Do not allow content when visual analysis is incomplete.
+  const decision =
+    !visualCompleted || combinedSeverity !== "safe"
+      ? "review"
+      : "allow";
+
+  let decisionReason;
+
+  if (!visualCompleted) {
+    decisionReason =
+      "Visual analysis is incomplete or unavailable; human review required.";
+  } else if (visualFlagged && textSeverity === "safe") {
+    decisionReason =
+      "Visual safety model flagged one or more sampled frames; human review required.";
+  } else if (combinedSeverity === "safe") {
+    decisionReason =
+      "No text or visual signal triggered the current review policy.";
+  } else {
+    decisionReason =
+      "Text toxicity assessment requires human review.";
   }
 
   return {
     combinedRiskLevel: combinedSeverity,
     combinedRiskScore: null,
-    decision: combinedSeverity === "safe" ? "allow" : "review",
-    decisionReason:
-      visualFlagged && textSeverity === "safe"
-        ? "Visual safety model flagged one or more sampled frames; human review required."
-        : combinedSeverity === "safe"
-          ? "No text or visual signal triggered the current review policy."
-          : "Text toxicity assessment requires human review.",
+    decision,
+    decisionReason,
     automaticRestrictionEnabled: false,
   };
 }
+
 
 export async function analyzeText(text) {
   const prediction = await predictText(text);
@@ -572,6 +589,15 @@ export async function runAnalysis(videoId, resultId) {
       };
     } catch (error) {
       console.error("Visual analysis failed:", error);
+         visualAnalysisSucceeded = false;
+  visualAnalysis = {
+    status: "failed",
+    sampledFrameCount: 0,
+    flaggedFrameCount: 0,
+    models: [],
+    scoreTypes: [],
+    error: "Visual analysis could not be completed; text analysis completed.",
+  };
     }
 
     if (events.length) {
